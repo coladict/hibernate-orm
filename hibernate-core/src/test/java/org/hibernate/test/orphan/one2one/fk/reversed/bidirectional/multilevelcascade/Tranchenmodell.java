@@ -21,38 +21,50 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301  USA
  */
-package org.hibernate.test.hql;
+package org.hibernate.test.orphan.one2one.fk.reversed.bidirectional.multilevelcascade;
 
-import javax.persistence.Column;
+import java.util.ArrayList;
+import java.util.List;
+import javax.persistence.CascadeType;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
+import javax.persistence.FetchType;
 import javax.persistence.Id;
-import javax.persistence.Table;
+import javax.persistence.OneToMany;
+import javax.persistence.OneToOne;
 
 @Entity
-@Table(name="department")
-public class Department implements java.io.Serializable {
-    private Integer deptNo;
-    private String deptName;
+public class Tranchenmodell {
 
     @Id
-    @GeneratedValue
-    @Column(name="id_dep")
-    public Integer getDeptNo() {
-        return this.deptNo;
+    private Long id;
+
+    @OneToMany(cascade = CascadeType.ALL, mappedBy = "tranchenmodell", fetch = FetchType.LAZY, orphanRemoval = true)
+    private List<Tranche> tranchen = new ArrayList<Tranche>();
+
+    @OneToOne(mappedBy="tranchenmodell", optional = true, fetch = FetchType.LAZY)
+    private Preisregelung preisregelung;
+
+
+
+    public Long getId() {
+        return id;
     }
 
-    public void setDeptNo(Integer deptNo) {
-        this.deptNo = deptNo;
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+    public List<Tranche> getTranchen() {
+        return tranchen;
     }
 
-    public String getDeptName() {
-        return this.deptName;
+    public Preisregelung getPreisregelung() {
+        return preisregelung;
     }
 
-    public void setDeptName(String deptName) {
-        this.deptName = deptName;
+    public void setPreisregelung(Preisregelung preisregelung) {
+        this.preisregelung = preisregelung;
     }
+
 
 }

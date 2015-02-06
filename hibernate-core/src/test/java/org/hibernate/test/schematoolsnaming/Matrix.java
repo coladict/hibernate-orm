@@ -1,7 +1,7 @@
 /*
  * Hibernate, Relational Persistence for Idiomatic Java
  *
- * Copyright (c) 2014, Red Hat Inc. or third-party contributors as
+ * Copyright (c) 2015, Red Hat Inc. or third-party contributors as
  * indicated by the @author tags or express copyright attribution
  * statements applied by the authors.  All third-party contributions are
  * distributed under license by Red Hat Inc.
@@ -21,38 +21,20 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301  USA
  */
-package org.hibernate.test.hql;
+package org.hibernate.test.schematoolsnaming;
 
-import javax.persistence.Column;
+import java.util.HashSet;
+import java.util.Set;
+import javax.persistence.ElementCollection;
 import javax.persistence.Entity;
-import javax.persistence.GeneratedValue;
-import javax.persistence.GenerationType;
 import javax.persistence.Id;
-import javax.persistence.Table;
 
-@Entity
-@Table(name="department")
-public class Department implements java.io.Serializable {
-    private Integer deptNo;
-    private String deptName;
+@Entity(name="Mtx")
+public class Matrix {
+	@Id
+	private Integer id;
 
-    @Id
-    @GeneratedValue
-    @Column(name="id_dep")
-    public Integer getDeptNo() {
-        return this.deptNo;
-    }
-
-    public void setDeptNo(Integer deptNo) {
-        this.deptNo = deptNo;
-    }
-
-    public String getDeptName() {
-        return this.deptName;
-    }
-
-    public void setDeptName(String deptName) {
-        this.deptName = deptName;
-    }
-
+	@ElementCollection
+	private Set<Integer> mvalues = new HashSet<Integer>();
 }
+

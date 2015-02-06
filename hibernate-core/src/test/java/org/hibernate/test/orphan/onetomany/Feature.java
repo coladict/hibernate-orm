@@ -21,38 +21,52 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301  USA
  */
-package org.hibernate.test.hql;
+package org.hibernate.test.orphan.onetomany;
 
-import javax.persistence.Column;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.ManyToOne;
 import javax.persistence.Table;
 
 @Entity
-@Table(name="department")
-public class Department implements java.io.Serializable {
-    private Integer deptNo;
-    private String deptName;
+@Table(name="feature")
+public class Feature {
+	@Id @GeneratedValue(strategy= GenerationType.AUTO)
+	private Long id;
 
-    @Id
-    @GeneratedValue
-    @Column(name="id_dep")
-    public Integer getDeptNo() {
-        return this.deptNo;
-    }
+	@ManyToOne()
+	private Product product;
 
-    public void setDeptNo(Integer deptNo) {
-        this.deptNo = deptNo;
-    }
+	private String name;
 
-    public String getDeptName() {
-        return this.deptName;
-    }
+	public Feature() {
+	}
 
-    public void setDeptName(String deptName) {
-        this.deptName = deptName;
-    }
+	public Feature(Product product) {
+		this.product = product;
+	}
 
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
+
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
+
+	public Product getProduct() {
+		return product;
+	}
+	public void setProduct(Product product) {
+		this.product = product;
+	}
 }
+

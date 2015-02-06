@@ -21,38 +21,49 @@
  * 51 Franklin Street, Fifth Floor
  * Boston, MA  02110-1301  USA
  */
-package org.hibernate.test.hql;
+package org.hibernate.test.orphan.onetomany;
 
-import javax.persistence.Column;
+import java.util.ArrayList;
+import java.util.List;
 import javax.persistence.Entity;
 import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
+import javax.persistence.OneToMany;
 import javax.persistence.Table;
 
 @Entity
-@Table(name="department")
-public class Department implements java.io.Serializable {
-    private Integer deptNo;
-    private String deptName;
+@Table(name="product")
+public class Product {
+	@Id
+	@GeneratedValue(strategy= GenerationType.AUTO)
+	private Long id;
 
-    @Id
-    @GeneratedValue
-    @Column(name="id_dep")
-    public Integer getDeptNo() {
-        return this.deptNo;
-    }
+	@OneToMany(mappedBy = "product", orphanRemoval = true)
+	//, cascade ={CascadeType.PERSIST}
+	private List<Feature> features = new ArrayList<Feature>();
 
-    public void setDeptNo(Integer deptNo) {
-        this.deptNo = deptNo;
-    }
+	private String name;
 
-    public String getDeptName() {
-        return this.deptName;
-    }
+	public Long getId() {
+		return id;
+	}
+	public void setId(Long id) {
+		this.id = id;
+	}
 
-    public void setDeptName(String deptName) {
-        this.deptName = deptName;
-    }
+	public String getName() {
+		return name;
+	}
+	public void setName(String name) {
+		this.name = name;
+	}
 
+	public List<Feature> getFeatures() {
+		return features;
+	}
+	public void setFeatures(List<Feature> features) {
+		this.features = features;
+	}
 }
+
