@@ -58,6 +58,8 @@ import javax.persistence.Temporal;
 import javax.persistence.TemporalType;
 import javax.persistence.Transient;
 import javax.persistence.Version;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.hibernate.annotations.Columns;
 import org.hibernate.cfg.EJB3DTDEntityResolver;
@@ -71,11 +73,7 @@ import org.hibernate.testing.boot.ClassLoaderAccessTestingImpl;
 import org.hibernate.testing.boot.ClassLoaderServiceTestingImpl;
 import org.junit.Test;
 
-import org.dom4j.DocumentException;
-import org.dom4j.io.SAXReader;
-import org.xml.sax.InputSource;
 import org.xml.sax.SAXException;
-import org.xml.sax.SAXNotSupportedException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -429,23 +427,23 @@ public class JPAOverriddenAnnotationReaderTest extends BaseUnitTestCase {
 		assertEquals( OtherLogListener.class.getName(), context.getDefaultEntityListeners().get( 0 ) );
 	}
 
-	private XMLContext buildContext(String ormfile) throws SAXException, DocumentException, IOException {
-		XMLHelper xmlHelper = new XMLHelper( ClassLoaderServiceTestingImpl.INSTANCE );
+	private XMLContext buildContext(String ormfile) throws SAXException, IOException {
+		XMLHelper xmlHelper = XMLHelper.get( ClassLoaderServiceTestingImpl.INSTANCE );
 		InputStream is = ClassLoaderServiceTestingImpl.INSTANCE.locateResourceStream( ormfile );
 		assertNotNull( "ORM.xml not found: " + ormfile, is );
 		XMLContext context = new XMLContext( ClassLoaderAccessTestingImpl.INSTANCE );
 		ErrorLogger errorLogger = new ErrorLogger();
-		SAXReader saxReader = xmlHelper.createSAXReader( errorLogger, EJB3DTDEntityResolver.INSTANCE );
-		//saxReader.setValidation( false );
+		DocumentBuilderFactory dbf = xmlHelper.getDocumentBuilderFactory();
+
+		org.w3c.dom.Document doc;
 		try {
-			saxReader.setFeature( "http://apache.org/xml/features/validation/schema", true );
+			DocumentBuilder docbuilder = dbf.newDocumentBuilder();
+			docbuilder.setErrorHandler( errorLogger );
+			docbuilder.setEntityResolver( EJB3DTDEntityResolver.INSTANCE );
+			doc = docbuilder.parse( new BufferedInputStream( is ) );
 		}
-		catch ( SAXNotSupportedException e ) {
-			saxReader.setValidation( false );
-		}
-		org.dom4j.Document doc;
-		try {
-			doc = saxReader.read( new InputSource( new BufferedInputStream( is ) ) );
+		catch (Exception ex) {
+			throw new RuntimeException( ex );
 		}
 		finally {
 			is.close();

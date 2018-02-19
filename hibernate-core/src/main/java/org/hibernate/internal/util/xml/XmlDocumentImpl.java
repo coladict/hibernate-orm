@@ -8,7 +8,7 @@ package org.hibernate.internal.util.xml;
 
 import java.io.Serializable;
 
-import org.dom4j.Document;
+import org.w3c.dom.Document;
 
 /**
  * Basic implemementation of {@link XmlDocument}

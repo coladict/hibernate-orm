@@ -18,7 +18,6 @@ import java.util.TreeSet;
 
 import javax.persistence.JoinColumn;
 
-import org.dom4j.Element;
 import org.hibernate.MappingException;
 import org.hibernate.annotations.common.reflection.ReflectionManager;
 import org.hibernate.envers.ModificationStore;
@@ -64,6 +63,7 @@ import org.hibernate.envers.internal.tools.MappingTools;
 import org.hibernate.envers.internal.tools.ReflectionTools;
 import org.hibernate.envers.internal.tools.StringTools;
 import org.hibernate.envers.internal.tools.Tools;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Component;
 import org.hibernate.mapping.IndexedCollection;
@@ -86,6 +86,9 @@ import org.hibernate.type.SortedMapType;
 import org.hibernate.type.SortedSetType;
 import org.hibernate.type.Type;
 import org.jboss.logging.Logger;
+import org.w3c.dom.Document;
+
+import org.w3c.dom.Element;
 
 /**
  * Generates metadata for a collection-valued property.
@@ -336,10 +339,11 @@ public final class CollectionMetadataGenerator {
 			String prefix,
 			MetadataTools.ColumnNameIterator columnNameIterator,
 			IdMappingData relatedIdMapping) {
-		final Element properties = (Element) relatedIdMapping.getXmlRelationMapping().clone();
+		Element properties = (Element) relatedIdMapping.getXmlRelationMapping().cloneNode( true );
 		MetadataTools.prefixNamesInPropertyElement( properties, prefix, columnNameIterator, true, true );
-		for ( Element idProperty : (java.util.List<Element>) properties.elements() ) {
-			xmlMapping.add( (Element) idProperty.clone() );
+		Document ownerDoc = xmlMapping.getOwnerDocument();
+		for ( final Element idProperty : XMLHelper.getChildren( properties ) ) {
+			xmlMapping.appendChild( XMLHelper.ensureOwner( idProperty.cloneNode( true ), ownerDoc, false ) );
 		}
 	}
 
@@ -619,7 +623,7 @@ public final class CollectionMetadataGenerator {
 					componentClass
 			);
 
-			final Element parentXmlMapping = xmlMapping.getParent();
+			final Element parentXmlMapping = (Element) xmlMapping.getParentNode();
 			final ComponentAuditingData auditData = new ComponentAuditingData();
 			final ReflectionManager reflectionManager = mainGenerator.getMetadata().getMetadataBuildingOptions().getReflectionManager();
 
@@ -678,7 +682,7 @@ public final class CollectionMetadataGenerator {
 		else {
 			// Last but one parameter: collection components are always insertable
 			final boolean mapped = mainGenerator.getBasicMetadataGenerator().addBasic(
-					key ? xmlMapping : xmlMapping.getParent(),
+					key ? xmlMapping : ((Element) xmlMapping.getParentNode()),
 					new PropertyAuditingData(
 							prefix,
 							"field",
@@ -839,14 +843,14 @@ public final class CollectionMetadataGenerator {
 				xmlMappingData.newAdditionalMapping(),
 				new AuditTableData( auditMiddleEntityName, auditMiddleTableName, schema, catalog ), null, null
 		);
-		final Element middleEntityXmlId = middleEntityXml.addElement( "composite-id" );
+		final Element middleEntityXmlId = XMLHelper.addChild( middleEntityXml, "composite-id" );
 
 		// If there is a where clause on the relation, adding it to the middle entity.
 		if ( where != null ) {
-			middleEntityXml.addAttribute( "where", where );
+			middleEntityXml.setAttribute( "where", where );
 		}
 
-		middleEntityXmlId.addAttribute( "name", mainGenerator.getVerEntCfg().getOriginalIdPropName() );
+		middleEntityXmlId.setAttribute( "name", mainGenerator.getVerEntCfg().getOriginalIdPropName() );
 
 		// Adding the revision number as a foreign key to the revision info entity to the composite id of the
 		// middle table.

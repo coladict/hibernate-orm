@@ -11,6 +11,7 @@ import java.util.Properties;
 import org.hibernate.envers.configuration.internal.metadata.reader.PropertyAuditingData;
 import org.hibernate.envers.internal.entities.PropertyData;
 import org.hibernate.envers.internal.entities.mapper.SimpleMapperBuilder;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.mapping.SimpleValue;
 import org.hibernate.mapping.Value;
 import org.hibernate.type.BasicType;
@@ -18,7 +19,7 @@ import org.hibernate.type.CustomType;
 import org.hibernate.type.EnumType;
 import org.hibernate.type.Type;
 
-import org.dom4j.Element;
+import org.w3c.dom.Element;
 
 /**
  * Generates metadata for basic properties: immutable types (including enums).
@@ -65,24 +66,24 @@ public final class BasicMetadataGenerator {
 
 	private void mapEnumerationType(Element parent, Type type, Properties parameters) {
 		if ( parameters.getProperty( EnumType.ENUM ) != null ) {
-			parent.addElement( "param" )
-					.addAttribute( "name", EnumType.ENUM )
-					.setText( parameters.getProperty( EnumType.ENUM ) );
+			Element child = XMLHelper.addChild( parent, "param");
+			child.setAttribute( "name", EnumType.ENUM );
+			child.setTextContent( parameters.getProperty( EnumType.ENUM ) );
 		}
 		else {
-			parent.addElement( "param" )
-					.addAttribute( "name", EnumType.ENUM )
-					.setText( type.getReturnedClass().getName() );
+			Element child = XMLHelper.addChild( parent, "param");
+			child.setAttribute( "name", EnumType.ENUM );
+			child.setTextContent( type.getReturnedClass().getName() );
 		}
 		if ( parameters.getProperty( EnumType.NAMED ) != null ) {
-			parent.addElement( "param" )
-					.addAttribute( "name", EnumType.NAMED )
-					.setText( parameters.getProperty( EnumType.NAMED ) );
+			Element child = XMLHelper.addChild( parent, "param");
+			child.setAttribute( "name", EnumType.NAMED );
+			child.setTextContent( Boolean.toString( !( (EnumType) ( (CustomType) type ).getUserType() ).isOrdinal() ) );
 		}
 		else {
-			parent.addElement( "param" )
-					.addAttribute( "name", EnumType.NAMED )
-					.setText( "" + !( (EnumType) ( (CustomType) type ).getUserType() ).isOrdinal() );
+			Element child = XMLHelper.addChild( parent, "param");
+			child.setAttribute( "name", EnumType.NAMED );
+			child.setTextContent( parameters.getProperty( EnumType.ENUM ) );
 		}
 	}
 
@@ -95,15 +96,15 @@ public final class BasicMetadataGenerator {
 		final Type type = value.getType();
 
 		// A null mapper occurs when adding to composite-id element
-		final Element manyToOneElement = parent.addElement( mapper != null ? "many-to-one" : "key-many-to-one" );
-		manyToOneElement.addAttribute( "name", propertyAuditingData.getName() );
-		manyToOneElement.addAttribute( "class", type.getName() );
+		final Element manyToOneElement = XMLHelper.addChild( parent, mapper != null ? "many-to-one" : "key-many-to-one" );
+		manyToOneElement.setAttribute( "name", propertyAuditingData.getName() );
+		manyToOneElement.setAttribute( "class", type.getName() );
 
 		// HHH-11107
 		// Use FK hbm magic value 'none' to skip making foreign key constraints between the Envers
 		// schema and the base table schema when a @ManyToOne is present in an identifier.
 		if ( mapper == null ) {
-			manyToOneElement.addAttribute( "foreign-key", "none" );
+			manyToOneElement.setAttribute( "foreign-key", "none" );
 		}
 
 		MetadataTools.addColumns( manyToOneElement, value.getColumnIterator() );
@@ -147,10 +148,10 @@ public final class BasicMetadataGenerator {
 
 	private void applyNestedType(SimpleValue value, Element propertyMapping) {
 		final Properties typeParameters = value.getTypeParameters();
-		final Element typeMapping = propertyMapping.addElement( "type" );
+		final Element typeMapping = XMLHelper.addChild( propertyMapping, "type" );
 		final String typeName = getBasicTypeName( value.getType() );
 
-		typeMapping.addAttribute( "name", typeName );
+		typeMapping.setAttribute( "name", typeName );
 
 		if ( isEnumType( value.getType(), typeName ) ) {
 			// Proper handling of enumeration type
@@ -162,7 +163,9 @@ public final class BasicMetadataGenerator {
 				final String keyType = (String) object;
 				final String property = typeParameters.getProperty( keyType );
 				if ( property != null ) {
-					typeMapping.addElement( "param" ).addAttribute( "name", keyType ).setText( property );
+					Element child = XMLHelper.addChild( typeMapping, "param" );
+					child.setAttribute( "name", keyType );
+					child.setTextContent( property );
 				}
 			}
 		}

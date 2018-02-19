@@ -17,11 +17,15 @@ import org.hibernate.envers.internal.entities.mapper.relation.OneToOneNotOwningM
 import org.hibernate.envers.internal.entities.mapper.relation.OneToOnePrimaryKeyJoinColumnMapper;
 import org.hibernate.envers.internal.entities.mapper.relation.ToOneIdMapper;
 import org.hibernate.envers.internal.tools.MappingTools;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.mapping.OneToOne;
 import org.hibernate.mapping.ToOne;
 import org.hibernate.mapping.Value;
 
-import org.dom4j.Element;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 /**
  * Generates metadata for to-one relations (reference-valued properties).
@@ -81,8 +85,8 @@ public final class ToOneRelationMetadataGenerator {
 		}
 
 		// Adding an element to the mapping corresponding to the references entity id's
-		final Element properties = (Element) idMapping.getXmlRelationMapping().clone();
-		properties.addAttribute( "name", propertyAuditingData.getName() );
+		final Element properties = (Element) idMapping.getXmlRelationMapping().cloneNode( true );
+		properties.setAttribute( "name", propertyAuditingData.getName() );
 
 		MetadataTools.prefixNamesInPropertyElement(
 				properties,
@@ -93,10 +97,11 @@ public final class ToOneRelationMetadataGenerator {
 		);
 
 		// Extracting related id properties from properties tag
-		for ( Object o : properties.content() ) {
-			final Element element = (Element) o;
-			element.setParent( null );
-			parent.add( element );
+		NodeList children = properties.getChildNodes();
+		final Document ownerDoc = parent.getOwnerDocument();
+		for ( int i = 0; i < children.getLength(); i++) {
+			Node child = XMLHelper.ensureOwner( children.item( i ), ownerDoc, true );
+			parent.appendChild( child );
 		}
 
 		// Adding mapper for the id

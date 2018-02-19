@@ -8,7 +8,7 @@ package org.hibernate.envers.internal.entities;
 
 import org.hibernate.envers.internal.entities.mapper.id.IdMapper;
 
-import org.dom4j.Element;
+import org.w3c.dom.Element;
 
 /**
  * @author Adam Warski (adam at warski dot org)

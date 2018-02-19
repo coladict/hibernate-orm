@@ -14,9 +14,13 @@ import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.Selectable;
 
-import org.dom4j.Attribute;
-import org.dom4j.Document;
-import org.dom4j.Element;
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+
+import static org.hibernate.internal.util.xml.XMLHelper.addChild;
+import static org.hibernate.internal.util.xml.XMLHelper.cloneWithNewName;
+import static org.hibernate.internal.util.xml.XMLHelper.getChildren;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -30,26 +34,39 @@ public final class MetadataTools {
 	public static Element addNativelyGeneratedId(
 			Element parent, String name, String type,
 			boolean useRevisionEntityWithNativeId) {
-		final Element idMapping = parent.addElement( "id" );
-		idMapping.addAttribute( "name", name ).addAttribute( "type", type );
+		final Element idMapping = addChild( parent, "id" );
+		idMapping.setAttribute( "name", name );
+		idMapping.setAttribute( "type", type );
 
-		final Element generatorMapping = idMapping.addElement( "generator" );
+		final Element generatorMapping = addChild( idMapping, "generator" );
 		if ( useRevisionEntityWithNativeId ) {
-			generatorMapping.addAttribute( "class", "native" );
+			generatorMapping.setAttribute( "class", "native" );
 		}
 		else {
-			generatorMapping.addAttribute( "class", "org.hibernate.envers.enhanced.OrderedSequenceGenerator" );
-			generatorMapping.addElement( "param" ).addAttribute( "name", "sequence_name" ).setText(
-					"REVISION_GENERATOR"
-			);
-			generatorMapping.addElement( "param" )
-					.addAttribute( "name", "table_name" )
-					.setText( "REVISION_GENERATOR" );
-			generatorMapping.addElement( "param" ).addAttribute( "name", "initial_value" ).setText( "1" );
-			generatorMapping.addElement( "param" ).addAttribute( "name", "increment_size" ).setText( "1" );
+			generatorMapping.setAttribute( "class", "org.hibernate.envers.enhanced.OrderedSequenceGenerator" );
+			Element param;
+			param = addChild( generatorMapping, "param" );
+			param.setAttribute( "name", "sequence_name" );
+			param.setTextContent( "REVISION_GENERATOR" );
+
+			param = addChild( generatorMapping, "param" );
+			param.setAttribute( "name", "table_name" );
+			param.setTextContent( "REVISION_GENERATOR" );
+
+			param = addChild( generatorMapping, "param" );
+			param.setAttribute( "name", "initial_value" );
+			param.setTextContent( "1" );
+
+			param = addChild( generatorMapping, "param" );
+			param.setAttribute( "name", "increment_size" );
+			param.setTextContent( "1" );
+
 		}
-//        generatorMapping.addAttribute("class", "sequence");
-//        generatorMapping.addElement("param").addAttribute("name", "sequence").setText("custom");
+
+//		generatorMapping.setAttribute( "class", "sequence" );
+//		param = addChild( generatorMapping, "param" );
+//		param.setAttribute( "name", "sequence" );
+//		param.setTextContent( "custom" );
 
 		return idMapping;
 	}
@@ -63,18 +80,18 @@ public final class MetadataTools {
 			boolean key) {
 		final Element propMapping;
 		if ( key ) {
-			propMapping = parent.addElement( "key-property" );
+			propMapping = addChild( parent, "key-property" );
 		}
 		else {
-			propMapping = parent.addElement( "property" );
-			propMapping.addAttribute( "insert", Boolean.toString( insertable ) );
-			propMapping.addAttribute( "update", Boolean.toString( updateable ) );
+			propMapping = addChild( parent, "property" );
+			propMapping.setAttribute( "insert", Boolean.toString( insertable ) );
+			propMapping.setAttribute( "update", Boolean.toString( updateable ) );
 		}
 
-		propMapping.addAttribute( "name", name );
+		propMapping.setAttribute( "name", name );
 
 		if ( type != null ) {
-			propMapping.addAttribute( "type", type );
+			propMapping.setAttribute( "type", type );
 		}
 
 		return propMapping;
@@ -100,9 +117,9 @@ public final class MetadataTools {
 	}
 
 	private static void addOrModifyAttribute(Element parent, String name, String value) {
-		final Attribute attribute = parent.attribute( name );
+		final Attr attribute = parent.getAttributeNode( name );
 		if ( attribute == null ) {
-			parent.addAttribute( name, value );
+			parent.setAttribute( name, value );
 		}
 		else {
 			attribute.setValue( value );
@@ -113,7 +130,7 @@ public final class MetadataTools {
 	 * Column name shall be wrapped with '`' signs if quotation required.
 	 */
 	public static Element addOrModifyColumn(Element parent, String name) {
-		final Element columnMapping = parent.element( "column" );
+		final Element columnMapping = addChild( parent, "column" );
 
 		if ( columnMapping == null ) {
 			return addColumn( parent, name, null, null, null, null, null, null );
@@ -153,27 +170,27 @@ public final class MetadataTools {
 			String customRead,
 			String customWrite,
 			boolean quoted) {
-		final Element columnMapping = parent.addElement( "column" );
+		final Element columnMapping = addChild( parent, "column" );
 
-		columnMapping.addAttribute( "name", quoted ? "`" + name + "`" : name );
+		columnMapping.setAttribute( "name", quoted ? "`" + name + "`" : name );
 		if ( length != null ) {
-			columnMapping.addAttribute( "length", length.toString() );
+			columnMapping.setAttribute( "length", length.toString() );
 		}
 		if ( scale != null ) {
-			columnMapping.addAttribute( "scale", Integer.toString( scale ) );
+			columnMapping.setAttribute( "scale", Integer.toString( scale ) );
 		}
 		if ( precision != null ) {
-			columnMapping.addAttribute( "precision", Integer.toString( precision ) );
+			columnMapping.setAttribute( "precision", Integer.toString( precision ) );
 		}
 		if ( !StringTools.isEmpty( sqlType ) ) {
-			columnMapping.addAttribute( "sql-type", sqlType );
+			columnMapping.setAttribute( "sql-type", sqlType );
 		}
 
 		if ( !StringTools.isEmpty( customRead ) ) {
-			columnMapping.addAttribute( "read", customRead );
+			columnMapping.setAttribute( "read", customRead );
 		}
 		if ( !StringTools.isEmpty( customWrite ) ) {
-			columnMapping.addAttribute( "write", customWrite );
+			columnMapping.setAttribute( "write", customWrite );
 		}
 
 		return columnMapping;
@@ -185,33 +202,34 @@ public final class MetadataTools {
 			AuditTableData auditTableData,
 			String discriminatorValue,
 			Boolean isAbstract) {
-		final Element hibernateMapping = document.addElement( "hibernate-mapping" );
-		hibernateMapping.addAttribute( "auto-import", "false" );
+		final Element hibernateMapping = document.createElement( "hibernate-mapping" );
+		document.appendChild( hibernateMapping );
+		hibernateMapping.setAttribute( "auto-import", "false" );
 
-		final Element classMapping = hibernateMapping.addElement( type );
+		final Element classMapping = addChild( hibernateMapping, type );
 
 		if ( auditTableData.getAuditEntityName() != null ) {
-			classMapping.addAttribute( "entity-name", auditTableData.getAuditEntityName() );
+			classMapping.setAttribute( "entity-name", auditTableData.getAuditEntityName() );
 		}
 
 		if ( discriminatorValue != null ) {
-			classMapping.addAttribute( "discriminator-value", discriminatorValue );
+			classMapping.setAttribute( "discriminator-value", discriminatorValue );
 		}
 
 		if ( !StringTools.isEmpty( auditTableData.getAuditTableName() ) ) {
-			classMapping.addAttribute( "table", auditTableData.getAuditTableName() );
+			classMapping.setAttribute( "table", auditTableData.getAuditTableName() );
 		}
 
 		if ( !StringTools.isEmpty( auditTableData.getSchema() ) ) {
-			classMapping.addAttribute( "schema", auditTableData.getSchema() );
+			classMapping.setAttribute( "schema", auditTableData.getSchema() );
 		}
 
 		if ( !StringTools.isEmpty( auditTableData.getCatalog() ) ) {
-			classMapping.addAttribute( "catalog", auditTableData.getCatalog() );
+			classMapping.setAttribute( "catalog", auditTableData.getCatalog() );
 		}
 
 		if ( isAbstract != null ) {
-			classMapping.addAttribute( "abstract", isAbstract.toString() );
+			classMapping.setAttribute( "abstract", isAbstract.toString() );
 		}
 
 		return classMapping;
@@ -240,7 +258,7 @@ public final class MetadataTools {
 				isAbstract
 		);
 
-		classMapping.addAttribute( "extends", extendsEntityName );
+		classMapping.setAttribute( "extends", extendsEntityName );
 
 		return classMapping;
 	}
@@ -250,16 +268,16 @@ public final class MetadataTools {
 			String tableName,
 			String schema,
 			String catalog) {
-		final Element joinMapping = parent.addElement( "join" );
+		final Element joinMapping = addChild( parent, "join" );
 
-		joinMapping.addAttribute( "table", tableName );
+		joinMapping.setAttribute( "table", tableName );
 
 		if ( !StringTools.isEmpty( schema ) ) {
-			joinMapping.addAttribute( "schema", schema );
+			joinMapping.setAttribute( "schema", schema );
 		}
 
 		if ( !StringTools.isEmpty( catalog ) ) {
-			joinMapping.addAttribute( "catalog", catalog );
+			joinMapping.setAttribute( "catalog", catalog );
 		}
 
 		return joinMapping;
@@ -299,14 +317,12 @@ public final class MetadataTools {
 
 	@SuppressWarnings({"unchecked"})
 	private static void changeNamesInColumnElement(Element element, ColumnNameIterator columnNameIterator) {
-		final Iterator<Element> properties = element.elementIterator();
-		while ( properties.hasNext() ) {
-			final Element property = properties.next();
+		for ( final Element property : getChildren( element ) ) {
 
-			if ( "column".equals( property.getName() ) ) {
-				final Attribute nameAttr = property.attribute( "name" );
+			if ( "column".equals( property.getNodeName() ) ) {
+				final Attr nameAttr = property.getAttributeNode( "name" );
 				if ( nameAttr != null ) {
-					nameAttr.setText( columnNameIterator.next() );
+					nameAttr.setValue( columnNameIterator.next() );
 				}
 			}
 		}
@@ -319,38 +335,32 @@ public final class MetadataTools {
 			ColumnNameIterator columnNameIterator,
 			boolean changeToKey,
 			boolean insertable) {
-		final Iterator<Element> properties = element.elementIterator();
-		while ( properties.hasNext() ) {
-			final Element property = properties.next();
+		for ( final Element property : getChildren( element ) ) {
 
-			if ( "property".equals( property.getName() ) || "many-to-one".equals( property.getName() ) ) {
-				final Attribute nameAttr = property.attribute( "name" );
+			if ( "property".equals( property.getNodeName() ) || "many-to-one".equals( property.getNodeName() ) ) {
+				final Attr nameAttr = property.getAttributeNode( "name" );
 				if ( nameAttr != null ) {
-					nameAttr.setText( prefix + nameAttr.getText() );
+					nameAttr.setValue( prefix + nameAttr.getTextContent() );
 				}
 
 				changeNamesInColumnElement( property, columnNameIterator );
 
 				if ( changeToKey ) {
-					property.setName( "key-" + property.getName() );
+					Element copy = cloneWithNewName( property, "key-" + property.getNodeName() );
 
 					// HHH-11463 when cloning a many-to-one to be a key-many-to-one, the FK attribute
 					// should be explicitly set to 'none' or added to be 'none' to avoid issues with
 					// making references to the main schema.
-					if ( property.getName().equals( "key-many-to-one" ) ) {
-						final Attribute foreignKey = property.attribute( "foreign-key" );
-						if ( foreignKey == null ) {
-							property.addAttribute( "foreign-key", "none" );
-						}
-						else {
-							foreignKey.setValue( "none" );
-						}
+					if ( copy.getNodeName().equals( "key-many-to-one" ) ) {
+						copy.setAttribute( "foreign-key", "none" );
 					}
+
+					element.replaceChild( copy, property );
 				}
 
-				if ( "property".equals( property.getName() ) ) {
-					final Attribute insert = property.attribute( "insert" );
-					insert.setText( Boolean.toString( insertable ) );
+				if ( "property".equals( property.getNodeName() ) ) {
+					final Attr insert = property.getAttributeNode("insert" );
+					insert.setValue( Boolean.toString( insertable ) );
 				}
 			}
 		}
@@ -363,7 +373,7 @@ public final class MetadataTools {
 	 * @param formula Formula descriptor.
 	 */
 	public static void addFormula(Element element, Formula formula) {
-		element.addElement( "formula" ).setText( formula.getText() );
+		addChild( element, "formula" ).setTextContent( formula.getText() );
 	}
 
 	/**

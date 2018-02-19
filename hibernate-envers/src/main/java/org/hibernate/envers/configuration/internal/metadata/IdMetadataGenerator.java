@@ -28,8 +28,8 @@ import org.hibernate.mapping.ToOne;
 import org.hibernate.type.ManyToOneType;
 import org.hibernate.type.Type;
 
-import org.dom4j.Element;
-import org.dom4j.tree.DefaultElement;
+import org.w3c.dom.Element;
+import org.w3c.dom.Document;
 
 /**
  * Generates metadata for primary identifiers (ids) of versions entities.
@@ -127,11 +127,11 @@ public final class IdMetadataGenerator {
 	}
 
 	@SuppressWarnings({"unchecked"})
-	IdMappingData addId(PersistentClass pc, boolean audited) {
+	IdMappingData addId(Document owner, PersistentClass pc, boolean audited) {
 		// Xml mapping which will be used for relations
-		final Element relIdMapping = new DefaultElement( "properties" );
+		final Element relIdMapping = owner.createElement("properties" );
 		// Xml mapping which will be used for the primary key of the versions table
-		final Element origIdMapping = new DefaultElement( "composite-id" );
+		final Element origIdMapping = owner.createElement( "composite-id" );
 
 		final Property idProp = pc.getIdentifierProperty();
 		final Component idMapper = pc.getIdentifierMapper();
@@ -224,7 +224,7 @@ public final class IdMetadataGenerator {
 			);
 		}
 
-		origIdMapping.addAttribute( "name", mainGenerator.getVerEntCfg().getOriginalIdPropName() );
+		origIdMapping.setAttribute( "name", mainGenerator.getVerEntCfg().getOriginalIdPropName() );
 
 		// Adding a relation to the revision entity (effectively: the "revision number" property)
 		mainGenerator.addRevisionInfoRelation( origIdMapping );

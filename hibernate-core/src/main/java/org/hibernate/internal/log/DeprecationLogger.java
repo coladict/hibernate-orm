@@ -13,6 +13,7 @@ import org.jboss.logging.annotations.Message;
 import org.jboss.logging.annotations.MessageLogger;
 import org.jboss.logging.annotations.ValidIdRange;
 
+import static org.jboss.logging.Logger.Level.ERROR;
 import static org.jboss.logging.Logger.Level.INFO;
 import static org.jboss.logging.Logger.Level.WARN;
 
@@ -53,9 +54,9 @@ public interface DeprecationLogger extends BasicLogger {
 	/**
 	 * Log message indicating the use of DOM4J EntityMode.
 	 */
-	@LogMessage( level = WARN )
+	@LogMessage( level = ERROR )
 	@Message(
-			value = "Use of DOM4J entity-mode is considered deprecated",
+			value = "Use of DOM4J entity-mode is deprecated and removed",
 			id = 90000003
 	)
 	public void logDeprecationOfDomEntityModeSupport();

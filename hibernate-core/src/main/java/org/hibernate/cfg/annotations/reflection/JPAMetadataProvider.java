@@ -28,8 +28,9 @@ import org.hibernate.boot.registry.classloading.spi.ClassLoadingException;
 import org.hibernate.boot.spi.ClassLoaderAccess;
 import org.hibernate.boot.spi.ClassLoaderAccessDelegateImpl;
 import org.hibernate.boot.spi.MetadataBuildingOptions;
+import org.hibernate.internal.util.xml.XMLHelper;
 
-import org.dom4j.Element;
+import org.w3c.dom.Element;
 
 /**
  * MetadataProvider aware of the JPA Deployment descriptor
@@ -104,7 +105,7 @@ public class JPAMetadataProvider implements MetadataProvider {
 			defaults.put( EntityListeners.class, entityListeners );
 			for ( Element element : xmlContext.getAllDocuments() ) {
 				@SuppressWarnings( "unchecked" )
-				List<Element> elements = element.elements( "sequence-generator" );
+				List<Element> elements = XMLHelper.getChildren( element, "sequence-generator" );
 				List<SequenceGenerator> sequenceGenerators = ( List<SequenceGenerator> ) defaults.get( SequenceGenerator.class );
 				if ( sequenceGenerators == null ) {
 					sequenceGenerators = new ArrayList<SequenceGenerator>();
@@ -114,7 +115,7 @@ public class JPAMetadataProvider implements MetadataProvider {
 					sequenceGenerators.add( JPAOverriddenAnnotationReader.buildSequenceGeneratorAnnotation( subelement ) );
 				}
 
-				elements = element.elements( "table-generator" );
+				elements = XMLHelper.getChildren( element, "table-generator" );
 				List<TableGenerator> tableGenerators = ( List<TableGenerator> ) defaults.get( TableGenerator.class );
 				if ( tableGenerators == null ) {
 					tableGenerators = new ArrayList<TableGenerator>();

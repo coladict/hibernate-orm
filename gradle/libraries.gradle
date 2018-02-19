@@ -74,6 +74,7 @@ ext {
             jaxb2_ant:      'org.jvnet.jaxb2_commons:jaxb2-basics-ant:0.6.3',
             jaxb2_jaxb:     'org.jvnet.jaxb2_commons:jaxb2-basics-jaxb:2.2.4-1',
             jaxb2_jaxb_xjc: 'org.jvnet.jaxb2_commons:jaxb2-basics-jaxb-xjc:2.2.4-1',
+			xml_apis:       'xml-apis:xml-apis:1.4.01',
 
             // Animal Sniffer Ant Task and Java 1.6 API signature file
             // not using 1.9 for the time being due to MANIMALSNIFFER-34

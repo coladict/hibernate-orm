@@ -7,14 +7,12 @@
 package org.hibernate.test.annotations.reflection;
 
 import java.io.BufferedInputStream;
-import java.io.IOException;
 import java.io.InputStream;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.dom4j.io.SAXReader;
 import org.junit.Assert;
 import org.junit.Test;
-import org.xml.sax.InputSource;
-import org.xml.sax.SAXNotSupportedException;
 
 import org.hibernate.cfg.EJB3DTDEntityResolver;
 import org.hibernate.cfg.annotations.reflection.XMLContext;
@@ -30,36 +28,30 @@ import org.hibernate.testing.boot.ClassLoaderServiceTestingImpl;
 public class XMLContextTest {
 	@Test
 	public void testAll() throws Exception {
-		final XMLHelper xmlHelper = new XMLHelper( ClassLoaderServiceTestingImpl.INSTANCE );
+		final XMLHelper xmlHelper = XMLHelper.get( ClassLoaderServiceTestingImpl.INSTANCE );
 		final XMLContext context = new XMLContext( ClassLoaderAccessTestingImpl.INSTANCE );
 
-		InputStream is = ClassLoaderServiceTestingImpl.INSTANCE.locateResourceStream(
-				"org/hibernate/test/annotations/reflection/orm.xml"
-		);
-		Assert.assertNotNull( "ORM.xml not found", is );
-
 		final ErrorLogger errorLogger = new ErrorLogger();
-		final SAXReader saxReader = xmlHelper.createSAXReader( errorLogger, EJB3DTDEntityResolver.INSTANCE );
+		org.w3c.dom.Document doc;
+		try (InputStream is = ClassLoaderServiceTestingImpl.INSTANCE.locateResourceStream(
+				"org/hibernate/test/annotations/reflection/orm.xml"
+		)) {
+			Assert.assertNotNull( "ORM.xml not found", is );
 
-		try {
-			saxReader.setFeature( "http://apache.org/xml/features/validation/schema", true );
+			DocumentBuilderFactory dbf = xmlHelper.getDocumentBuilderFactory();
+
+			DocumentBuilder docbuilder = dbf.newDocumentBuilder();
+			docbuilder.setErrorHandler( errorLogger );
+			docbuilder.setEntityResolver( EJB3DTDEntityResolver.INSTANCE );
+
+			doc = docbuilder.parse( new BufferedInputStream( is ) );
 		}
-		catch ( SAXNotSupportedException e ) {
-			saxReader.setValidation( false );
+
+		if ( errorLogger.hasErrors() ) {
+			errorLogger.logErrors();
+			Assert.fail();
 		}
-		org.dom4j.Document doc;
-		try {
-			doc = saxReader.read( new InputSource( new BufferedInputStream( is ) ) );
-		}
-		finally {
-			try {
-				is.close();
-			}
-			catch ( IOException ioe ) {
-				//log.warn( "Could not close input stream", ioe );
-			}
-		}
-		Assert.assertFalse( errorLogger.hasErrors() );
+		Assert.assertNotNull( "ORM.xml could not be parsed", doc );
 		context.addDocument( doc );
 	}
 }

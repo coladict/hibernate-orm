@@ -374,7 +374,7 @@
             <xs:documentation>
                 Root entity mapping. Poorly named as entities do not have to be represented by
                 classes at all. Mapped entities may be represented via different methodologies
-                (POJO, Map, Dom4j).
+                (POJO, Map).
             </xs:documentation>
         </xs:annotation>
         <xs:complexContent>

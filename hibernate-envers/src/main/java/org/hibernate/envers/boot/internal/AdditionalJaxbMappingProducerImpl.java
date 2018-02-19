@@ -10,18 +10,17 @@ import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
-import java.io.IOException;
 import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
 import java.io.Writer;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
 
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.io.OutputFormat;
-import org.dom4j.io.XMLWriter;
 import org.hibernate.HibernateException;
 import org.hibernate.boot.jaxb.Origin;
 import org.hibernate.boot.jaxb.SourceType;
@@ -33,9 +32,12 @@ import org.hibernate.boot.spi.AdditionalJaxbMappingProducer;
 import org.hibernate.boot.spi.MetadataBuildingContext;
 import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.envers.configuration.internal.MappingCollector;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.service.ServiceRegistry;
 import org.jboss.jandex.IndexView;
 import org.jboss.logging.Logger;
+
+import org.w3c.dom.Document;
 
 /**
  * @author Steve Ebersole
@@ -65,8 +67,8 @@ public class AdditionalJaxbMappingProducerImpl implements AdditionalJaxbMappingP
 
 		final MappingCollector mappingCollector = new MappingCollector() {
 			@Override
-			public void addDocument(Document document) throws DocumentException {
-				dump( document );
+			public void addDocument(Document document) {
+				dump( enversService.getXmlHelper() ,  document );
 
 				// while the commented-out code here is more efficient (well, understanding that
 				// this whole process is un-efficient)  it leads to un-decipherable messages when
@@ -78,12 +80,9 @@ public class AdditionalJaxbMappingProducerImpl implements AdditionalJaxbMappingP
 				// this form at least allows us to get better error messages
 				final ByteArrayOutputStream baos = new ByteArrayOutputStream();
 				try {
-					final Writer w = new BufferedWriter( new OutputStreamWriter( baos, "UTF-8" ) );
-					final XMLWriter xw = new XMLWriter( w, new OutputFormat( " ", true ) );
-					xw.write( document );
-					w.flush();
+					enversService.getXmlHelper().writeToStream(document, baos, 1);
 				}
-				catch (IOException e) {
+				catch (Exception e) {
 					throw new HibernateException( "Unable to bind Envers-generated XML", e );
 				}
 
@@ -101,20 +100,29 @@ public class AdditionalJaxbMappingProducerImpl implements AdditionalJaxbMappingP
 		return additionalMappingDocuments;
 	}
 
-	private static void dump(Document document) {
+	private static void dump(XMLHelper xmlHelper, Document document) {
 		if ( !log.isTraceEnabled() ) {
 			return;
 		}
 
 		final ByteArrayOutputStream baos = new ByteArrayOutputStream();
-		final Writer w = new PrintWriter( baos );
+		final Writer w = new BufferedWriter( new OutputStreamWriter( baos, StandardCharsets.UTF_8 ) );
 
 		try {
-			final XMLWriter xw = new XMLWriter( w, new OutputFormat( " ", true ) );
-			xw.write( document );
+			Transformer transformer = xmlHelper.getTransformerFactory().newTransformer();
+			transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "no");
+			transformer.setOutputProperty(OutputKeys.METHOD, "xml");
+			transformer.setOutputProperty(OutputKeys.ENCODING, "utf-8");
+			transformer.setOutputProperty(OutputKeys.VERSION, "1.0");
+			transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+			// assuming using default XML provider available since 1.6
+			transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "1");
+
+			transformer.transform(new DOMSource(document),
+				new StreamResult(w));
 			w.flush();
 		}
-		catch (IOException e1) {
+		catch (Exception e1) {
 			e1.printStackTrace();
 		}
 

@@ -10,14 +10,16 @@ import java.io.InputStream;
 import java.lang.annotation.Annotation;
 import java.lang.reflect.AnnotatedElement;
 
-import org.dom4j.Document;
-import org.dom4j.io.SAXReader;
+import org.hibernate.boot.registry.classloading.internal.ClassLoaderServiceImpl;
 
 import org.hibernate.cfg.annotations.reflection.JPAOverriddenAnnotationReader;
 import org.hibernate.cfg.annotations.reflection.XMLContext;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.testing.junit4.BaseUnitTestCase;
 
 import org.hibernate.testing.boot.ClassLoaderAccessTestingImpl;
+
+import org.w3c.dom.Document;
 
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNotNull;
@@ -63,8 +65,9 @@ abstract class Ejb3XmlTestCase extends BaseUnitTestCase {
 	}
 
 	protected XMLContext getContext(InputStream is) throws Exception {
+		XMLHelper helper = XMLHelper.get( new ClassLoaderServiceImpl( getClass().getClassLoader() ) );
 		XMLContext xmlContext = new XMLContext( ClassLoaderAccessTestingImpl.INSTANCE );
-		Document doc = new SAXReader().read( is );
+		Document doc = helper.readFromStream( is );
 		xmlContext.addDocument( doc );
 		return xmlContext;
 	}

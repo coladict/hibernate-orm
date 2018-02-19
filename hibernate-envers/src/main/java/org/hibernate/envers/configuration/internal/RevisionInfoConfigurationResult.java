@@ -12,8 +12,8 @@ import org.hibernate.envers.internal.revisioninfo.RevisionInfoGenerator;
 import org.hibernate.envers.internal.revisioninfo.RevisionInfoNumberReader;
 import org.hibernate.envers.internal.revisioninfo.RevisionInfoQueryCreator;
 
-import org.dom4j.Document;
-import org.dom4j.Element;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author Lukasz Antoniak (lukasz dot antoniak at gmail dot com)

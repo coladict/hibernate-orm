@@ -41,7 +41,7 @@ import org.hibernate.internal.util.collections.CollectionHelper;
 import org.jboss.jandex.IndexView;
 import org.jboss.logging.Logger;
 
-import org.dom4j.Document;
+import org.w3c.dom.Document;
 
 /**
  * @author Steve Ebersole
@@ -87,12 +87,12 @@ public class AnnotationMetadataSourceProcessorImpl implements MetadataSourceProc
 //			// convert the StAX representation in delayedOrmXmlData to DOM because that's what commons-annotations needs
 //			final MappingBinder.DelayedOrmXmlData delayedOrmXmlData = (MappingBinder.DelayedOrmXmlData) xmlBinding.getRoot();
 //			org.dom4j.Document dom4jDocument = toDom4jDocument( delayedOrmXmlData );
-			if ( !org.dom4j.Document.class.isInstance( xmlBinding.getRoot() ) ) {
+			if ( !Document.class.isInstance( xmlBinding.getRoot() ) ) {
 				continue;
 			}
-			org.dom4j.Document dom4jDocument = (Document) xmlBinding.getRoot();
+			Document document = (Document) xmlBinding.getRoot();
 
-			final List<String> classNames = jpaMetadataProvider.getXMLContext().addDocument( dom4jDocument );
+			final List<String> classNames = jpaMetadataProvider.getXMLContext().addDocument( document );
 			for ( String className : classNames ) {
 				xClasses.add( toXClass( className, reflectionManager ) );
 			}

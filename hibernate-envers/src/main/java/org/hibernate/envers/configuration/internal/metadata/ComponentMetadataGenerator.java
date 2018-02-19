@@ -17,7 +17,7 @@ import org.hibernate.mapping.Component;
 import org.hibernate.mapping.Property;
 import org.hibernate.mapping.Value;
 
-import org.dom4j.Element;
+import org.w3c.dom.Element;
 
 /**
  * Generates metadata for components.

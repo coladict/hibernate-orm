@@ -9,44 +9,56 @@ package org.hibernate.spatial.testing;
 
 import java.io.InputStream;
 import java.util.ArrayList;
-import java.util.Iterator;
 import java.util.List;
 
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
-import org.dom4j.io.SAXReader;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 public class TestDataReader {
+
+	private final DocumentBuilderFactory XMLFactory;
+	public TestDataReader() {
+		XMLFactory = DocumentBuilderFactory.newInstance();
+	}
 
 	public List<TestDataElement> read(String fileName) {
 		if ( fileName == null ) {
 			throw new RuntimeException( "Null testsuite-suite data file specified." );
 		}
+		DocumentBuilderFactory XMLFactory = DocumentBuilderFactory.newInstance();
 		List<TestDataElement> testDataElements = new ArrayList<TestDataElement>();
-		SAXReader reader = new SAXReader();
 		try {
-			Document document = reader.read( getInputStream( fileName ) );
+			DocumentBuilder builder = XMLFactory.newDocumentBuilder();
+			Document document = builder.parse(getInputStream( fileName ));
 			addDataElements( document, testDataElements );
 		}
-		catch (DocumentException e) {
+		catch (Exception e) {
 			throw new RuntimeException( e );
 		}
 		return testDataElements;
 	}
 
 	protected void addDataElements(Document document, List<TestDataElement> testDataElements) {
-		Element root = document.getRootElement();
-		for ( Iterator it = root.elementIterator(); it.hasNext(); ) {
-			Element element = (Element) it.next();
-			addDataElement( element, testDataElements );
+		Element root = document.getDocumentElement();
+		NodeList it = root.getChildNodes();
+		for (int i = 0; i < it.getLength(); i++) {
+			Node node = it.item(i);
+			if (node.getNodeType() == Node.ELEMENT_NODE) {
+				Element element = (Element) node;
+				addDataElement( element, testDataElements );
+			}
 		}
 	}
 
 	protected void addDataElement(Element element, List<TestDataElement> testDataElements) {
-		int id = Integer.parseInt( element.selectSingleNode( "id" ).getText() );
-		String type = element.selectSingleNode( "type" ).getText();
-		String wkt = element.selectSingleNode( "wkt" ).getText();
+		int id = Integer.parseInt( getSingleChildElement( element, "id" ).getTextContent() );
+		String type = getSingleChildElement( element, "type" ).getTextContent();
+		String wkt = getSingleChildElement( element, "wkt" ).getTextContent();
 		TestDataElement testDataElement = new TestDataElement( id, type, wkt );
 		testDataElements.add( testDataElement );
 	}
@@ -57,5 +69,15 @@ public class TestDataReader {
 			throw new RuntimeException( String.format( "File %s not found on classpath.", fileName ) );
 		}
 		return is;
+	}
+
+	protected Element getSingleChildElement(Element parent, String name) {
+		NodeList nl = parent.getElementsByTagName(name);
+		if (nl.getLength() > 0) {
+			return (Element) nl.item(0);
+		}
+		else {
+			return null;
+		}
 	}
 }

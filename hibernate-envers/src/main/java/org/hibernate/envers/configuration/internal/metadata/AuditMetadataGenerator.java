@@ -29,6 +29,7 @@ import org.hibernate.envers.internal.tools.StringTools;
 import org.hibernate.envers.internal.tools.Triple;
 import org.hibernate.envers.strategy.AuditStrategy;
 import org.hibernate.envers.strategy.ValidityAuditStrategy;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.mapping.Collection;
 import org.hibernate.mapping.Join;
 import org.hibernate.mapping.OneToOne;
@@ -48,9 +49,11 @@ import org.hibernate.type.OneToOneType;
 import org.hibernate.type.TimestampType;
 import org.hibernate.type.Type;
 
-import org.dom4j.Element;
-
 import org.jboss.logging.Logger;
+
+import org.w3c.dom.Element;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -143,11 +146,11 @@ public final class AuditMetadataGenerator {
 	 *
 	 * @return A revision info mapping, which can be added to other mappings (has no parent).
 	 */
-	private Element cloneAndSetupRevisionInfoRelationMapping() {
-		final Element revMapping = (Element) revisionInfoRelationMapping.clone();
-		revMapping.addAttribute( "name", verEntCfg.getRevisionFieldName() );
+	private Element cloneAndSetupRevisionInfoRelationMapping(Document newOwner) {
+		final Element revMapping = (Element) XMLHelper.ensureOwner( revisionInfoRelationMapping.cloneNode( true ), newOwner, true );
+		revMapping.setAttribute( "name", verEntCfg.getRevisionFieldName() );
 		if ( globalCfg.isCascadeDeleteRevision() ) {
-			revMapping.addAttribute( "on-delete", "cascade" );
+			revMapping.setAttribute( "on-delete", "cascade" );
 		}
 
 		MetadataTools.addOrModifyColumn( revMapping, verEntCfg.getRevisionFieldName() );
@@ -156,7 +159,7 @@ public final class AuditMetadataGenerator {
 	}
 
 	void addRevisionInfoRelation(Element anyMapping) {
-		anyMapping.add( cloneAndSetupRevisionInfoRelationMapping() );
+		anyMapping.appendChild( cloneAndSetupRevisionInfoRelationMapping( anyMapping.getOwnerDocument() ) );
 	}
 
 	void addRevisionType(Element anyMapping, Element anyMappingEnd) {
@@ -171,7 +174,7 @@ public final class AuditMetadataGenerator {
 				true,
 				isKey
 		);
-		revTypeProperty.addAttribute( "type", "org.hibernate.envers.internal.entities.RevisionTypeType" );
+		revTypeProperty.setAttribute( "type", "org.hibernate.envers.internal.entities.RevisionTypeType" );
 
 		// Adding the end revision, if appropriate
 		addEndRevision( anyMappingEnd );
@@ -180,12 +183,12 @@ public final class AuditMetadataGenerator {
 	private void addEndRevision(Element anyMapping) {
 		// Add the end-revision field, if the appropriate strategy is used.
 		if ( auditStrategy instanceof ValidityAuditStrategy ) {
-			final Element endRevMapping = (Element) revisionInfoRelationMapping.clone();
-			endRevMapping.setName( "many-to-one" );
-			endRevMapping.addAttribute( "name", verEntCfg.getRevisionEndFieldName() );
+			Element endRevMapping = XMLHelper.cloneWithNewName( revisionInfoRelationMapping, "many-to-one" );
+			endRevMapping = (Element) XMLHelper.ensureOwner(endRevMapping, anyMapping.getOwnerDocument(), false);
+			endRevMapping.setAttribute( "name", verEntCfg.getRevisionEndFieldName() );
 			MetadataTools.addOrModifyColumn( endRevMapping, verEntCfg.getRevisionEndFieldName() );
 
-			anyMapping.add( endRevMapping );
+			anyMapping.appendChild( endRevMapping );
 
 			if ( verEntCfg.isRevisionEndTimestampEnabled() ) {
 				// add a column for the timestamp of the end revision
@@ -485,15 +488,15 @@ public final class AuditMetadataGenerator {
 
 			// HHH-8305 - Fix case when join is considered optional.
 			if ( join.isOptional() ) {
-				joinElement.addAttribute( "optional", "true" );
+				joinElement.setAttribute( "optional", "true" );
 			}
 
 			// HHH-8305 - Fix case when join is the inverse side of a mapping.
 			if ( join.isInverse() ) {
-				joinElement.addAttribute( "inverse", "true" );
+				joinElement.setAttribute( "inverse", "true" );
 			}
 
-			final Element joinKey = joinElement.addElement( "key" );
+			final Element joinKey = XMLHelper.addChild( joinElement, "key" );
 			MetadataTools.addColumns( joinKey, join.getKey().getColumnIterator() );
 			MetadataTools.addColumn( joinKey, verEntCfg.getRevisionFieldName(), null, null, null, null, null, null );
 		}
@@ -541,14 +544,14 @@ public final class AuditMetadataGenerator {
 
 		// Checking if there is a discriminator column
 		if ( pc.getDiscriminator() != null ) {
-			final Element discriminatorElement = classMapping.addElement( "discriminator" );
+			final Element discriminatorElement = XMLHelper.addChild( classMapping, "discriminator" );
 			// Database column or SQL formula allowed to distinguish entity types
 			MetadataTools.addColumnsOrFormulas( discriminatorElement, pc.getDiscriminator().getColumnIterator() );
-			discriminatorElement.addAttribute( "type", pc.getDiscriminator().getType().getName() );
+			discriminatorElement.setAttribute( "type", pc.getDiscriminator().getType().getName() );
 		}
 
 		// Adding the id mapping
-		classMapping.add( (Element) idMapper.getXmlMapping().clone() );
+		classMapping.appendChild( XMLHelper.ensureOwner( idMapper.getXmlMapping().cloneNode( true ), classMapping.getOwnerDocument(), false ) );
 
 		// Adding the "revision type" property
 		addRevisionType( classMapping, classMapping );
@@ -593,6 +596,7 @@ public final class AuditMetadataGenerator {
 
 	@SuppressWarnings({"unchecked"})
 	public void generateFirstPass(
+			Document document,
 			PersistentClass pc,
 			ClassAuditingData auditingData,
 			EntityXmlMappingData xmlMappingData,
@@ -602,7 +606,7 @@ public final class AuditMetadataGenerator {
 
 		if ( !isAudited ) {
 			final String entityName = pc.getEntityName();
-			final IdMappingData idMapper = idMetadataGenerator.addId( pc, false );
+			final IdMappingData idMapper = idMetadataGenerator.addId( document, pc, false );
 
 			if ( idMapper == null ) {
 				// Unsupported id mapping, e.g. key-many-to-one. If the entity is used in auditing, an exception
@@ -639,7 +643,7 @@ public final class AuditMetadataGenerator {
 		final AuditTableData auditTableData = new AuditTableData( auditEntityName, auditTableName, schema, catalog );
 
 		// Generating a mapping for the id
-		final IdMappingData idMapper = idMetadataGenerator.addId( pc, true );
+		final IdMappingData idMapper = idMetadataGenerator.addId( document, pc, true );
 
 		final InheritanceType inheritanceType = InheritanceType.get( pc );
 
@@ -664,11 +668,11 @@ public final class AuditMetadataGenerator {
 				mappingData = generateInheritanceMappingData( pc, xmlMappingData, auditTableData, "joined-subclass" );
 
 				// Adding the "key" element with all id columns...
-				final Element keyMapping = mappingData.getFirst().addElement( "key" );
+				final Element keyMapping = XMLHelper.addChild( mappingData.getFirst(), "key" );
 				MetadataTools.addColumns( keyMapping, pc.getTable().getPrimaryKey().columnIterator() );
 
 				// ... and the revision number column, read from the revision info relation mapping.
-				keyMapping.add( (Element) cloneAndSetupRevisionInfoRelationMapping().element( "column" ).clone() );
+				keyMapping.appendChild( XMLHelper.getUniqueChild( cloneAndSetupRevisionInfoRelationMapping( keyMapping.getOwnerDocument() ), "column" ).cloneNode( true ) );
 				break;
 
 			case TABLE_PER_CLASS:

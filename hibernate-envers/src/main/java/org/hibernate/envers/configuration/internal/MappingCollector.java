@@ -6,8 +6,7 @@
  */
 package org.hibernate.envers.configuration.internal;
 
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
+import org.w3c.dom.Document;
 
 /**
  * Used in building the AuditConfiguration to allow callbacks for generated audit entities.
@@ -17,5 +16,5 @@ import org.dom4j.DocumentException;
  * @author Steve Ebersole
  */
 public interface MappingCollector {
-	void addDocument(Document document) throws DocumentException;
+	void addDocument(Document document);
 }

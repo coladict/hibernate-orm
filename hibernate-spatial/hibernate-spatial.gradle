@@ -16,11 +16,6 @@ dependencies {
     compile('org.postgresql:postgresql:42.1.4')
     compile([group: 'org.geolatte', name: 'geolatte-geom', version: '1.2.0'])
 
-    compile(libraries.dom4j) {
-        transitive = false
-    }
-
-
     testCompile(libraries.junit)
     testCompile(project(':hibernate-testing'))
     testCompile([group: 'commons-dbcp', name: 'commons-dbcp', version: '1.4'])

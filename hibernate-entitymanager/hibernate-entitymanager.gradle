@@ -5,7 +5,6 @@ description = '(deprecated - use hibernate-core instead) Hibernate O/RM implemen
 
 dependencies {
 	compile( project( ':hibernate-core' ) )
-	compile( libraries.dom4j )
 	compile( libraries.commons_annotations )
 	compile( libraries.jpa )
 	compile( libraries.javassist )

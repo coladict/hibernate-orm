@@ -40,8 +40,8 @@ import org.hibernate.mapping.PersistentClass;
 import org.hibernate.type.LongType;
 import org.hibernate.type.Type;
 
-import org.dom4j.Document;
-import org.dom4j.Element;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -75,7 +75,7 @@ public class RevisionInfoConfiguration {
 	}
 
 	private Document generateDefaultRevisionInfoXmlMapping() {
-		final Document document = globalCfg.getEnversService().getXmlHelper().getDocumentFactory().createDocument();
+		final Document document = globalCfg.getEnversService().getXmlHelper().newEmptyDocument();
 
 		final Element classMapping = MetadataTools.createEntity(
 				document,
@@ -84,8 +84,8 @@ public class RevisionInfoConfiguration {
 				null
 		);
 
-		classMapping.addAttribute( "name", revisionInfoEntityName );
-		classMapping.addAttribute( "table", "REVINFO" );
+		classMapping.setAttribute( "name", revisionInfoEntityName );
+		classMapping.setAttribute( "table", "REVINFO" );
 
 		final Element idProperty = MetadataTools.addNativelyGeneratedId(
 				classMapping,
@@ -141,27 +141,33 @@ public class RevisionInfoConfiguration {
 			String joinTablePrimaryKeyColumnName,
 			String joinTableValueColumnName,
 			String joinTableValueColumnType) {
-		final Element set = classMapping.addElement( "set" );
-		set.addAttribute( "name", propertyName );
-		set.addAttribute( "table", joinTableName );
-		set.addAttribute( "schema", joinTableSchema );
-		set.addAttribute( "catalog", joinTableCatalog );
-		set.addAttribute( "cascade", "persist, delete" );
-		set.addAttribute( "fetch", "join" );
-		set.addAttribute( "lazy", "false" );
-		final Element key = set.addElement( "key" );
-		key.addAttribute( "column", joinTablePrimaryKeyColumnName );
-		final Element element = set.addElement( "element" );
-		element.addAttribute( "type", joinTableValueColumnType );
-		final Element column = element.addElement( "column" );
-		column.addAttribute( "name", joinTableValueColumnName );
+		Document document = classMapping.getOwnerDocument();
+		final Element set = document.createElement( "set" );
+		classMapping.appendChild(set);
+		set.setAttribute( "name", propertyName );
+		set.setAttribute( "table", joinTableName );
+		set.setAttribute( "schema", joinTableSchema );
+		set.setAttribute( "catalog", joinTableCatalog );
+		set.setAttribute( "cascade", "persist, delete" );
+		set.setAttribute( "fetch", "join" );
+		set.setAttribute( "lazy", "false" );
+		final Element key = document.createElement( "key" );
+		set.appendChild(set);
+		key.setAttribute( "column", joinTablePrimaryKeyColumnName );
+		final Element element = document.createElement( "element" );
+		set.appendChild(element);
+		element.setAttribute( "type", joinTableValueColumnType );
+		final Element column = document.createElement( "column" );
+		set.appendChild(column);
+		column.setAttribute( "name", joinTableValueColumnName );
 	}
 
 	private Element generateRevisionInfoRelationMapping() {
-		final Document document = globalCfg.getEnversService().getXmlHelper().getDocumentFactory().createDocument();
-		final Element revRelMapping = document.addElement( "key-many-to-one" );
-		revRelMapping.addAttribute( "type", revisionPropType );
-		revRelMapping.addAttribute( "class", revisionInfoEntityName );
+		final Document document = globalCfg.getEnversService().getXmlHelper().newEmptyDocument();
+		final Element revRelMapping = document.createElement( "key-many-to-one" );
+		document.appendChild(revRelMapping);
+		revRelMapping.setAttribute( "type", revisionPropType );
+		revRelMapping.setAttribute( "class", revisionInfoEntityName );
 
 		if ( revisionPropSqlType != null ) {
 			// Putting a fake name to make Hibernate happy. It will be replaced later anyway.

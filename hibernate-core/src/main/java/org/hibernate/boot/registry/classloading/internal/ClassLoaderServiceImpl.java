@@ -28,6 +28,7 @@ import org.hibernate.boot.registry.classloading.spi.ClassLoadingException;
 import org.hibernate.cfg.AvailableSettings;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
+import org.jboss.logging.Logger;
 
 /**
  * Standard implementation of the service for interacting with class loaders
@@ -138,6 +139,7 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 		}
 	}
 
+	private static final Logger jblogger = Logger.getLogger( ClassLoaderServiceImpl.class );
 	private static class AggregatedClassLoader extends ClassLoader {
 		private final ClassLoader[] individualClassLoaders;
 		private final TcclLookupPrecedence tcclLookupPrecedence;
@@ -146,6 +148,10 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 			super( null );
 			individualClassLoaders = orderedClassLoaderSet.toArray( new ClassLoader[orderedClassLoaderSet.size()] );
 			tcclLookupPrecedence = precedence;
+			jblogger.info("Creating AggregatedClassLoader with ClassLoaders:");
+			for (ClassLoader cl : individualClassLoaders) {
+				jblogger.info("CL: " + cl.getClass().getName() + "@" + System.identityHashCode(cl));
+			}
 		}
 
 		private Iterator<ClassLoader> newClassLoaderIterator() {
@@ -285,6 +291,10 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 			final Iterator<ClassLoader> clIterator = newClassLoaderIterator();
 			while ( clIterator.hasNext() ) {
 				final ClassLoader classLoader = clIterator.next();
+				if (classLoader == this) {
+					// This happens when the current ClassLoader is the Thread context ClassLoader and creates recursion
+					continue;
+				}
 				final Enumeration<URL> urls = classLoader.getResources( name );
 				while ( urls.hasMoreElements() ) {
 					resourceUrls.add( urls.nextElement() );
@@ -311,6 +321,10 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 			final Iterator<ClassLoader> clIterator = newClassLoaderIterator();
 			while ( clIterator.hasNext() ) {
 				final ClassLoader classLoader = clIterator.next();
+				if (classLoader == this) {
+					// This happens when the current ClassLoader is the Thread context ClassLoader
+					continue;
+				}
 				final URL resource = classLoader.getResource( name );
 				if ( resource != null ) {
 					return resource;
@@ -324,6 +338,10 @@ public class ClassLoaderServiceImpl implements ClassLoaderService {
 			final Iterator<ClassLoader> clIterator = newClassLoaderIterator();
 			while ( clIterator.hasNext() ) {
 				final ClassLoader classLoader = clIterator.next();
+				if (classLoader == this) {
+					// This happens when the current ClassLoader is the Thread context ClassLoader
+					continue;
+				}
 				try {
 					return classLoader.loadClass( name );
 				}

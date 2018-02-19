@@ -31,7 +31,7 @@ public @interface Tuplizer {
 	Class impl();
 
 	/**
-	 * either pojo, dynamic-map or dom4j.
+	 * either pojo, dynamic-map.
 	 * @deprecated should use #entityModeType instead
 	 */
 	@Deprecated

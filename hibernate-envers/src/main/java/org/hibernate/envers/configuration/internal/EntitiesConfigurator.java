@@ -12,6 +12,7 @@ import java.util.Map;
 
 import org.hibernate.MappingException;
 import org.hibernate.annotations.common.reflection.ReflectionManager;
+import org.hibernate.boot.registry.classloading.spi.ClassLoaderService;
 import org.hibernate.boot.spi.MetadataImplementor;
 import org.hibernate.envers.configuration.internal.metadata.AuditEntityNameRegister;
 import org.hibernate.envers.configuration.internal.metadata.AuditMetadataGenerator;
@@ -22,12 +23,12 @@ import org.hibernate.envers.internal.entities.EntitiesConfigurations;
 import org.hibernate.envers.internal.tools.StringTools;
 import org.hibernate.envers.internal.tools.graph.GraphTopologicalSort;
 import org.hibernate.envers.strategy.AuditStrategy;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.mapping.PersistentClass;
 import org.hibernate.service.ServiceRegistry;
 
-import org.dom4j.Document;
-import org.dom4j.DocumentException;
-import org.dom4j.Element;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -81,21 +82,25 @@ public class EntitiesConfigurator {
 				auditEntityNameRegister
 		);
 
+		final XMLHelper xmlHelper = XMLHelper.get( serviceRegistry.requireService( ClassLoaderService.class ) );
+
+		final Document rootDoc = xmlHelper.newEmptyDocument();
+
 		// First pass
 		for ( Map.Entry<PersistentClass, ClassAuditingData> pcDatasEntry : classesAuditingData.getAllClassAuditedData() ) {
 			final PersistentClass pc = pcDatasEntry.getKey();
 			final ClassAuditingData auditData = pcDatasEntry.getValue();
 
-			final EntityXmlMappingData xmlMappingData = new EntityXmlMappingData();
+			final EntityXmlMappingData xmlMappingData = new EntityXmlMappingData( xmlHelper );
 			if ( auditData.isAudited() ) {
 				if ( !StringTools.isEmpty( auditData.getAuditTable().value() ) ) {
 					auditEntitiesConfiguration.addCustomAuditTableName( pc.getEntityName(), auditData.getAuditTable().value() );
 				}
 
-				auditMetaGen.generateFirstPass( pc, auditData, xmlMappingData, true );
+				auditMetaGen.generateFirstPass( rootDoc, pc, auditData, xmlMappingData, true );
 			}
 			else {
-				auditMetaGen.generateFirstPass( pc, auditData, xmlMappingData, false );
+				auditMetaGen.generateFirstPass( rootDoc, pc, auditData, xmlMappingData, false );
 			}
 
 			xmlMappings.put( pc, xmlMappingData );
@@ -114,7 +119,7 @@ public class EntitiesConfigurator {
 						mappingCollector.addDocument( additionalMapping );
 					}
 				}
-				catch (DocumentException e) {
+				catch (Exception e) {
 					throw new MappingException( e );
 				}
 			}
@@ -127,7 +132,7 @@ public class EntitiesConfigurator {
 					mappingCollector.addDocument( revisionInfoXmlMapping );
 				}
 			}
-			catch (DocumentException e) {
+			catch (Exception e) {
 				throw new MappingException( e );
 			}
 		}

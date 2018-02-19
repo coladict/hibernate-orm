@@ -9,9 +9,10 @@ package org.hibernate.envers.configuration.internal.metadata;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.dom4j.Document;
-import org.dom4j.DocumentHelper;
-import org.dom4j.Element;
+import org.hibernate.internal.util.xml.XMLHelper;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -19,14 +20,16 @@ import org.dom4j.Element;
 public class EntityXmlMappingData {
 	private Document mainXmlMapping;
 	private List<Document> additionalXmlMappings;
+	private final XMLHelper xmlHelper;
 	/**
 	 * The xml element that maps the class. The root can be one of the folowing elements:
 	 * class, subclass, union-subclass, joined-subclass
 	 */
 	private Element classMapping;
 
-	public EntityXmlMappingData() {
-		mainXmlMapping = DocumentHelper.createDocument();
+	public EntityXmlMappingData(XMLHelper xmlHelper) {
+		this.xmlHelper = xmlHelper;
+		mainXmlMapping = xmlHelper.newEmptyDocument();
 		additionalXmlMappings = new ArrayList<>();
 	}
 
@@ -39,7 +42,7 @@ public class EntityXmlMappingData {
 	}
 
 	public Document newAdditionalMapping() {
-		Document additionalMapping = DocumentHelper.createDocument();
+		Document additionalMapping = xmlHelper.newEmptyDocument();
 		additionalXmlMappings.add( additionalMapping );
 
 		return additionalMapping;

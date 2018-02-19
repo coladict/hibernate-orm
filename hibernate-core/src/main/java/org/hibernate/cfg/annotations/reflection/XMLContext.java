@@ -22,9 +22,10 @@ import org.hibernate.cfg.AttributeConverterDefinition;
 import org.hibernate.internal.CoreLogging;
 import org.hibernate.internal.CoreMessageLogger;
 import org.hibernate.internal.util.StringHelper;
+import org.hibernate.internal.util.xml.XMLHelper;
 
-import org.dom4j.Document;
-import org.dom4j.Element;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 /**
  * A helper for consuming orm.xml mappings.
@@ -56,28 +57,28 @@ public class XMLContext implements Serializable {
 	public List<String> addDocument(Document doc) {
 		hasContext = true;
 		List<String> addedClasses = new ArrayList<String>();
-		Element root = doc.getRootElement();
+		Element root = doc.getDocumentElement();
 		//global defaults
-		Element metadata = root.element( "persistence-unit-metadata" );
+		Element metadata = XMLHelper.getOptionalChild( root, "persistence-unit-metadata" );
 		if ( metadata != null ) {
 			if ( globalDefaults == null ) {
 				globalDefaults = new Default();
 				globalDefaults.setMetadataComplete(
-						metadata.element( "xml-mapping-metadata-complete" ) != null ?
+						XMLHelper.getOptionalChild( metadata, "xml-mapping-metadata-complete" ) != null ?
 								Boolean.TRUE :
 								null
 				);
-				Element defaultElement = metadata.element( "persistence-unit-defaults" );
+				Element defaultElement = XMLHelper.getOptionalChild( metadata, "persistence-unit-defaults" );
 				if ( defaultElement != null ) {
-					Element unitElement = defaultElement.element( "schema" );
-					globalDefaults.setSchema( unitElement != null ? unitElement.getTextTrim() : null );
-					unitElement = defaultElement.element( "catalog" );
-					globalDefaults.setCatalog( unitElement != null ? unitElement.getTextTrim() : null );
-					unitElement = defaultElement.element( "access" );
+					Element unitElement = XMLHelper.getOptionalChild( defaultElement, "schema" );
+					globalDefaults.setSchema( getTextTrim( unitElement ) );
+					unitElement = XMLHelper.getOptionalChild( defaultElement, "catalog" );
+					globalDefaults.setCatalog( getTextTrim( unitElement ) );
+					unitElement = XMLHelper.getOptionalChild( defaultElement, "access" );
 					setAccess( unitElement, globalDefaults );
-					unitElement = defaultElement.element( "cascade-persist" );
+					unitElement = XMLHelper.getOptionalChild( defaultElement, "cascade-persist" );
 					globalDefaults.setCascadePersist( unitElement != null ? Boolean.TRUE : null );
-					unitElement = defaultElement.element( "delimited-identifiers" );
+					unitElement = XMLHelper.getOptionalChild( defaultElement, "delimited-identifiers" );
 					globalDefaults.setDelimitedIdentifiers( unitElement != null ? Boolean.TRUE : null );
 					defaultEntityListeners.addAll( addEntityListenerClasses( defaultElement, null, addedClasses ) );
 				}
@@ -89,40 +90,51 @@ public class XMLContext implements Serializable {
 
 		//entity mapping default
 		Default entityMappingDefault = new Default();
-		Element unitElement = root.element( "package" );
-		String packageName = unitElement != null ? unitElement.getTextTrim() : null;
+		Element unitElement = XMLHelper.getOptionalChild( root, "package" );
+		String packageName = getTextTrim( unitElement );
 		entityMappingDefault.setPackageName( packageName );
-		unitElement = root.element( "schema" );
-		entityMappingDefault.setSchema( unitElement != null ? unitElement.getTextTrim() : null );
-		unitElement = root.element( "catalog" );
-		entityMappingDefault.setCatalog( unitElement != null ? unitElement.getTextTrim() : null );
-		unitElement = root.element( "access" );
+		unitElement = XMLHelper.getOptionalChild( root, "schema" );
+		entityMappingDefault.setSchema( getTextTrim( unitElement ) );
+		unitElement = XMLHelper.getOptionalChild( root, "catalog" );
+		entityMappingDefault.setCatalog( getTextTrim( unitElement ) );
+		unitElement = XMLHelper.getOptionalChild( root, "access" );
 		setAccess( unitElement, entityMappingDefault );
 		defaultElements.add( root );
 		
-		setLocalAttributeConverterDefinitions( root.elements( "converter" ) );
+		setLocalAttributeConverterDefinitions( XMLHelper.getChildren( root, "converter" ) );
 
-		List<Element> entities = root.elements( "entity" );
+		List<Element> entities = XMLHelper.getChildren( root, "entity" );
 		addClass( entities, packageName, entityMappingDefault, addedClasses );
 
-		entities = root.elements( "mapped-superclass" );
+		entities = XMLHelper.getChildren( root, "mapped-superclass" );
 		addClass( entities, packageName, entityMappingDefault, addedClasses );
 
-		entities = root.elements( "embeddable" );
+		entities = XMLHelper.getChildren( root, "embeddable" );
 		addClass( entities, packageName, entityMappingDefault, addedClasses );
 		return addedClasses;
 	}
 
+	private static String getTextTrim(Element element) {
+		if (element == null) {
+			return null;
+		}
+		final String result = element.getTextContent();
+		if (result == null) {
+			return result;
+		}
+		return result.trim();
+	}
+
 	private void setAccess(Element unitElement, Default defaultType) {
 		if ( unitElement != null ) {
-			String access = unitElement.getTextTrim();
+			String access = getTextTrim( unitElement );
 			setAccess( access, defaultType );
 		}
 	}
 
 	private void setAccess( String access, Default defaultType) {
 		AccessType type;
-		if ( access != null ) {
+		if ( StringHelper.isNotEmpty( access ) ) {
 			try {
 				type = AccessType.valueOf( access );
 			}
@@ -135,7 +147,7 @@ public class XMLContext implements Serializable {
 
 	private void addClass(List<Element> entities, String packageName, Default defaults, List<String> addedClasses) {
 		for (Element element : entities) {
-			String className = buildSafeClassName( element.attributeValue( "class" ), packageName );
+			String className = buildSafeClassName( element.getAttribute( "class" ), packageName );
 			if ( classOverriding.containsKey( className ) ) {
 				//maybe switch it to warn?
 				throw new IllegalStateException( "Duplicate XML entry for " + className );
@@ -144,11 +156,11 @@ public class XMLContext implements Serializable {
 			classOverriding.put( className, element );
 			Default localDefault = new Default();
 			localDefault.override( defaults );
-			String metadataCompleteString = element.attributeValue( "metadata-complete" );
-			if ( metadataCompleteString != null ) {
+			String metadataCompleteString = element.getAttribute( "metadata-complete" );
+			if ( StringHelper.isNotEmpty( metadataCompleteString ) ) {
 				localDefault.setMetadataComplete( Boolean.parseBoolean( metadataCompleteString ) );
 			}
-			String access = element.attributeValue( "access" );
+			String access = element.getAttribute( "access" );
 			setAccess( access, localDefault );
 			defaultsOverriding.put( className, localDefault );
 
@@ -159,15 +171,15 @@ public class XMLContext implements Serializable {
 
 	private List<String> addEntityListenerClasses(Element element, String packageName, List<String> addedClasses) {
 		List<String> localAddedClasses = new ArrayList<String>();
-		Element listeners = element.element( "entity-listeners" );
+		Element listeners = XMLHelper.getOptionalChild( element, "entity-listeners" );
 		if ( listeners != null ) {
 			@SuppressWarnings( "unchecked" )
-			List<Element> elements = listeners.elements( "entity-listener" );
+			List<Element> elements = XMLHelper.getChildren( listeners, "entity-listener" );
 			for (Element listener : elements) {
-				String listenerClassName = buildSafeClassName( listener.attributeValue( "class" ), packageName );
+				String listenerClassName = buildSafeClassName( listener.getAttribute( "class" ), packageName );
 				if ( classOverriding.containsKey( listenerClassName ) ) {
 					//maybe switch it to warn?
-					if ( "entity-listener".equals( classOverriding.get( listenerClassName ).getName() ) ) {
+					if ( "entity-listener".equals( classOverriding.get( listenerClassName ).getNodeName() ) ) {
 						LOG.duplicateListener( listenerClassName );
 						continue;
 					}
@@ -181,13 +193,13 @@ public class XMLContext implements Serializable {
 		addedClasses.addAll( localAddedClasses );
 		return localAddedClasses;
 	}
-	
+
 	@SuppressWarnings("unchecked")
 	private void setLocalAttributeConverterDefinitions(List<Element> converterElements) {
 		for ( Element converterElement : converterElements ) {
-			final String className = converterElement.attributeValue( "class" );
-			final String autoApplyAttribute = converterElement.attributeValue( "auto-apply" );
-			final boolean autoApply = autoApplyAttribute != null && Boolean.parseBoolean( autoApplyAttribute );
+			final String className = converterElement.getAttribute( "class" );
+			final String autoApplyAttribute = converterElement.getAttribute( "auto-apply" );
+			final boolean autoApply = StringHelper.isNotEmpty( autoApplyAttribute ) && Boolean.parseBoolean( autoApplyAttribute );
 
 			try {
 				final Class<? extends AttributeConverter> attributeConverterClass = classLoaderAccess.classForName(
