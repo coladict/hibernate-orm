@@ -74,6 +74,7 @@ import org.hibernate.testing.boot.ClassLoaderServiceTestingImpl;
 import org.junit.Test;
 
 import org.xml.sax.SAXException;
+import org.xml.sax.SAXParseException;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
@@ -449,7 +450,9 @@ public class JPAOverriddenAnnotationReaderTest extends BaseUnitTestCase {
 			is.close();
 		}
 		if ( errorLogger.hasErrors() ) {
-			System.out.println( errorLogger.getErrors().get( 0 ) );
+			for ( SAXParseException ex : errorLogger.getErrors() ) {
+				System.out.println( ex );
+			}
 		}
 		assertFalse( errorLogger.hasErrors() );
 		context.addDocument( doc );

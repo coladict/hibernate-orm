@@ -168,28 +168,6 @@ public final class XMLHelper {
 		return Collections.unmodifiableList( lst );
 	}
 
-	/**
-	 * Returns an iterator over the children of the given element with
-	 * the given tag name.
-	 *
-	 * @param element The parent element
-	 * @param tagName The name of the desired child
-	 * @return An interator of children or null if element is null.
-	 */
-	public static List<Element> getChildrenByTagName(
-			Element element,
-			String tagName) {
-		if ( element == null ) {
-			return null;
-		}
-
-		if ( tagName == null ) {
-			return asElementList( element.getChildNodes() );
-		}
-
-		return asElementList( element.getElementsByTagName( tagName ) );
-	}
-
 	public static List<Element> getChildren(Element element) {
 		if ( element == null ) {
 			return null;
@@ -209,7 +187,7 @@ public final class XMLHelper {
 	 * @throws Exception Child was not found or was not unique.
 	 */
 	public static Element getUniqueChild(Element element, String tagName) {
-		final Iterable<Element> goodChildrenHolder = getChildrenByTagName( element, tagName );
+		final Iterable<Element> goodChildrenHolder = getChildren( element, tagName );
 		final Iterator<Element> goodChildren = goodChildrenHolder == null ? null : goodChildrenHolder.iterator();
 
 		if ( goodChildren != null && goodChildren.hasNext() ) {
@@ -244,14 +222,25 @@ public final class XMLHelper {
 			return Collections.EMPTY_LIST;
 		}
 
-		NodeList nodeList = element.getElementsByTagName( tagName );
+		if ( tagName == null ) {
+			return asElementList( element.getChildNodes() );
+		}
+
+
+		NodeList nodeList = element.getChildNodes();
 		final int size = nodeList.getLength();
 		if (size == 0) {
 			return Collections.EMPTY_LIST;
 		}
 		ArrayList<Element> result = new ArrayList<>(size);
-		for (int i = 0; i < size; i++) {
-			result.add( (Element) nodeList.item( i ) );
+		for ( int i = 0; i < size; i++ ) {
+			Node n = nodeList.item( i );
+			if ( n.getNodeType() == Node.ELEMENT_NODE ) {
+				Element e = (Element) n;
+				if ( e.getNodeName().equals( tagName ))  {
+					result.add( (Element) nodeList.item( i ) );
+				}
+			}
 		}
 
 		return Collections.unmodifiableList( result );
@@ -292,7 +281,7 @@ public final class XMLHelper {
 			Element element,
 			String tagName,
 			Element defaultElement) {
-		final Iterable<Element> goodChildrenHolder = getChildrenByTagName( element, tagName );
+		final Iterable<Element> goodChildrenHolder = getChildren( element, tagName );
 		final Iterator<Element> goodChildren = goodChildrenHolder == null ? null : goodChildrenHolder.iterator();
 
 		if ( goodChildren != null && goodChildren.hasNext() ) {

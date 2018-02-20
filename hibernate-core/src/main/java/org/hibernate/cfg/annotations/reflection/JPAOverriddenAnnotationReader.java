@@ -2217,9 +2217,6 @@ public class JPAOverriddenAnnotationReader implements AnnotationReader {
 		AnnotationDescriptor columnResultDescriptor = new AnnotationDescriptor( ColumnResult.class );
 		copyStringAttribute( columnResultDescriptor, columnResultElement, "name", true );
 		final String columnTypeName = columnResultElement.getAttribute( "class" );
-		if ( StringHelper.isEmpty( columnTypeName ) ) {
-			throw new AnnotationException( "<column-result> without class. " + SCHEMA_VALIDATION );
-		}
 		if ( StringHelper.isNotEmpty( columnTypeName ) ) {
 			columnResultDescriptor.setValue( "type", resolveClassReference( columnTypeName, defaults, classLoaderAccess ) );
 		}
