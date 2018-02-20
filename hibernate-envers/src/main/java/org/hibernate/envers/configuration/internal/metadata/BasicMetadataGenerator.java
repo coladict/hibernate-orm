@@ -78,12 +78,12 @@ public final class BasicMetadataGenerator {
 		if ( parameters.getProperty( EnumType.NAMED ) != null ) {
 			Element child = XMLHelper.addChild( parent, "param");
 			child.setAttribute( "name", EnumType.NAMED );
-			child.setTextContent( Boolean.toString( !( (EnumType) ( (CustomType) type ).getUserType() ).isOrdinal() ) );
+			child.setTextContent( parameters.getProperty( EnumType.NAMED ) );
 		}
 		else {
 			Element child = XMLHelper.addChild( parent, "param");
 			child.setAttribute( "name", EnumType.NAMED );
-			child.setTextContent( parameters.getProperty( EnumType.ENUM ) );
+			child.setTextContent( Boolean.toString( !( (EnumType) ( (CustomType) type ).getUserType() ).isOrdinal() ) );
 		}
 	}
 

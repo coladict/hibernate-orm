@@ -672,7 +672,7 @@ public final class AuditMetadataGenerator {
 				MetadataTools.addColumns( keyMapping, pc.getTable().getPrimaryKey().columnIterator() );
 
 				// ... and the revision number column, read from the revision info relation mapping.
-				keyMapping.appendChild( XMLHelper.getUniqueChild( cloneAndSetupRevisionInfoRelationMapping( keyMapping.getOwnerDocument() ), "column" ).cloneNode( true ) );
+				keyMapping.appendChild( XMLHelper.getOptionalChild( cloneAndSetupRevisionInfoRelationMapping( keyMapping.getOwnerDocument() ), "column" ) );
 				break;
 
 			case TABLE_PER_CLASS:

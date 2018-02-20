@@ -54,6 +54,7 @@ public class RevisionInfoConfiguration {
 	private PropertyData modifiedEntityNamesData;
 	private Type revisionInfoTimestampType;
 	private GlobalConfiguration globalCfg;
+	final Document document;
 
 	private String revisionPropType;
 	private String revisionPropSqlType;
@@ -72,10 +73,10 @@ public class RevisionInfoConfiguration {
 		revisionInfoTimestampType = new LongType();
 
 		revisionPropType = "integer";
+		document = globalCfg.getEnversService().getXmlHelper().newEmptyDocument();
 	}
 
 	private Document generateDefaultRevisionInfoXmlMapping() {
-		final Document document = globalCfg.getEnversService().getXmlHelper().newEmptyDocument();
 
 		final Element classMapping = MetadataTools.createEntity(
 				document,
@@ -152,20 +153,18 @@ public class RevisionInfoConfiguration {
 		set.setAttribute( "fetch", "join" );
 		set.setAttribute( "lazy", "false" );
 		final Element key = document.createElement( "key" );
-		set.appendChild(set);
+		set.appendChild(key);
 		key.setAttribute( "column", joinTablePrimaryKeyColumnName );
 		final Element element = document.createElement( "element" );
 		set.appendChild(element);
 		element.setAttribute( "type", joinTableValueColumnType );
 		final Element column = document.createElement( "column" );
-		set.appendChild(column);
+		element.appendChild(column);
 		column.setAttribute( "name", joinTableValueColumnName );
 	}
 
 	private Element generateRevisionInfoRelationMapping() {
-		final Document document = globalCfg.getEnversService().getXmlHelper().newEmptyDocument();
 		final Element revRelMapping = document.createElement( "key-many-to-one" );
-		document.appendChild(revRelMapping);
 		revRelMapping.setAttribute( "type", revisionPropType );
 		revRelMapping.setAttribute( "class", revisionInfoEntityName );
 

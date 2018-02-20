@@ -10,6 +10,7 @@ import java.util.Iterator;
 import javax.persistence.JoinColumn;
 
 import org.hibernate.envers.internal.tools.StringTools;
+import org.hibernate.internal.util.xml.XMLHelper;
 import org.hibernate.mapping.Column;
 import org.hibernate.mapping.Formula;
 import org.hibernate.mapping.Selectable;
@@ -18,9 +19,6 @@ import org.w3c.dom.Attr;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import static org.hibernate.internal.util.xml.XMLHelper.addChild;
-import static org.hibernate.internal.util.xml.XMLHelper.cloneWithNewName;
-import static org.hibernate.internal.util.xml.XMLHelper.getChildren;
 
 /**
  * @author Adam Warski (adam at warski dot org)
@@ -34,37 +32,37 @@ public final class MetadataTools {
 	public static Element addNativelyGeneratedId(
 			Element parent, String name, String type,
 			boolean useRevisionEntityWithNativeId) {
-		final Element idMapping = addChild( parent, "id" );
+		final Element idMapping = XMLHelper.addChild( parent, "id" );
 		idMapping.setAttribute( "name", name );
 		idMapping.setAttribute( "type", type );
 
-		final Element generatorMapping = addChild( idMapping, "generator" );
+		final Element generatorMapping = XMLHelper.addChild( idMapping, "generator" );
 		if ( useRevisionEntityWithNativeId ) {
 			generatorMapping.setAttribute( "class", "native" );
 		}
 		else {
 			generatorMapping.setAttribute( "class", "org.hibernate.envers.enhanced.OrderedSequenceGenerator" );
 			Element param;
-			param = addChild( generatorMapping, "param" );
+			param = XMLHelper.addChild( generatorMapping, "param" );
 			param.setAttribute( "name", "sequence_name" );
 			param.setTextContent( "REVISION_GENERATOR" );
 
-			param = addChild( generatorMapping, "param" );
+			param = XMLHelper.addChild( generatorMapping, "param" );
 			param.setAttribute( "name", "table_name" );
 			param.setTextContent( "REVISION_GENERATOR" );
 
-			param = addChild( generatorMapping, "param" );
+			param = XMLHelper.addChild( generatorMapping, "param" );
 			param.setAttribute( "name", "initial_value" );
 			param.setTextContent( "1" );
 
-			param = addChild( generatorMapping, "param" );
+			param = XMLHelper.addChild( generatorMapping, "param" );
 			param.setAttribute( "name", "increment_size" );
 			param.setTextContent( "1" );
 
 		}
 
 //		generatorMapping.setAttribute( "class", "sequence" );
-//		param = addChild( generatorMapping, "param" );
+//		param = XMLHelper.addChild( generatorMapping, "param" );
 //		param.setAttribute( "name", "sequence" );
 //		param.setTextContent( "custom" );
 
@@ -80,10 +78,10 @@ public final class MetadataTools {
 			boolean key) {
 		final Element propMapping;
 		if ( key ) {
-			propMapping = addChild( parent, "key-property" );
+			propMapping = XMLHelper.addChild( parent, "key-property" );
 		}
 		else {
-			propMapping = addChild( parent, "property" );
+			propMapping = XMLHelper.addChild( parent, "property" );
 			propMapping.setAttribute( "insert", Boolean.toString( insertable ) );
 			propMapping.setAttribute( "update", Boolean.toString( updateable ) );
 		}
@@ -117,20 +115,14 @@ public final class MetadataTools {
 	}
 
 	private static void addOrModifyAttribute(Element parent, String name, String value) {
-		final Attr attribute = parent.getAttributeNode( name );
-		if ( attribute == null ) {
-			parent.setAttribute( name, value );
-		}
-		else {
-			attribute.setValue( value );
-		}
+		parent.setAttribute( name, value );
 	}
 
 	/**
 	 * Column name shall be wrapped with '`' signs if quotation required.
 	 */
 	public static Element addOrModifyColumn(Element parent, String name) {
-		final Element columnMapping = addChild( parent, "column" );
+		Element columnMapping = XMLHelper.getOptionalChild( parent, "column" );
 
 		if ( columnMapping == null ) {
 			return addColumn( parent, name, null, null, null, null, null, null );
@@ -170,7 +162,7 @@ public final class MetadataTools {
 			String customRead,
 			String customWrite,
 			boolean quoted) {
-		final Element columnMapping = addChild( parent, "column" );
+		final Element columnMapping = XMLHelper.addChild( parent, "column" );
 
 		columnMapping.setAttribute( "name", quoted ? "`" + name + "`" : name );
 		if ( length != null ) {
@@ -206,7 +198,7 @@ public final class MetadataTools {
 		document.appendChild( hibernateMapping );
 		hibernateMapping.setAttribute( "auto-import", "false" );
 
-		final Element classMapping = addChild( hibernateMapping, type );
+		final Element classMapping = XMLHelper.addChild( hibernateMapping, type );
 
 		if ( auditTableData.getAuditEntityName() != null ) {
 			classMapping.setAttribute( "entity-name", auditTableData.getAuditEntityName() );
@@ -268,7 +260,7 @@ public final class MetadataTools {
 			String tableName,
 			String schema,
 			String catalog) {
-		final Element joinMapping = addChild( parent, "join" );
+		final Element joinMapping = XMLHelper.addChild( parent, "join" );
 
 		joinMapping.setAttribute( "table", tableName );
 
@@ -317,7 +309,7 @@ public final class MetadataTools {
 
 	@SuppressWarnings({"unchecked"})
 	private static void changeNamesInColumnElement(Element element, ColumnNameIterator columnNameIterator) {
-		for ( final Element property : getChildren( element ) ) {
+		for ( final Element property : XMLHelper.getChildren( element ) ) {
 
 			if ( "column".equals( property.getNodeName() ) ) {
 				final Attr nameAttr = property.getAttributeNode( "name" );
@@ -335,7 +327,7 @@ public final class MetadataTools {
 			ColumnNameIterator columnNameIterator,
 			boolean changeToKey,
 			boolean insertable) {
-		for ( final Element property : getChildren( element ) ) {
+		for ( final Element property : XMLHelper.getChildren( element ) ) {
 
 			if ( "property".equals( property.getNodeName() ) || "many-to-one".equals( property.getNodeName() ) ) {
 				final Attr nameAttr = property.getAttributeNode( "name" );
@@ -346,7 +338,7 @@ public final class MetadataTools {
 				changeNamesInColumnElement( property, columnNameIterator );
 
 				if ( changeToKey ) {
-					Element copy = cloneWithNewName( property, "key-" + property.getNodeName() );
+					Element copy = XMLHelper.cloneWithNewName( property, "key-" + property.getNodeName() );
 
 					// HHH-11463 when cloning a many-to-one to be a key-many-to-one, the FK attribute
 					// should be explicitly set to 'none' or added to be 'none' to avoid issues with
@@ -373,7 +365,7 @@ public final class MetadataTools {
 	 * @param formula Formula descriptor.
 	 */
 	public static void addFormula(Element element, Formula formula) {
-		addChild( element, "formula" ).setTextContent( formula.getText() );
+		XMLHelper.addChild( element, "formula" ).setTextContent( formula.getText() );
 	}
 
 	/**
